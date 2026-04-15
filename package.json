@@ -11,10 +11,17 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "scripts": {
     "prepare": "tsup",
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
@@ -44,9 +51,10 @@
   },
   "homepage": "https://github.com/caiokf/valet#readme",
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@types/node": "^25.0.0",
-    "typescript": "^5.8.3",
     "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
     "vitest": "^3.1.1"
   },
   "engines": {
