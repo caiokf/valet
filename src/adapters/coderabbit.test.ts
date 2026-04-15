@@ -1,35 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
-import { createCodeRabbitRuntime } from "./coderabbit.js"
-import type { RuntimeExecutionRequest } from "../types.js"
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createCodeRabbitRuntime } from "./coderabbit.js";
+import { buildRequest } from "../test-helpers.js";
 
 const { execAbortableMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
-}))
+}));
 
 vi.mock("../exec.js", () => ({
   execAbortable: execAbortableMock,
-}))
-
-function buildRequest(overrides: Partial<RuntimeExecutionRequest> = {}): RuntimeExecutionRequest {
-  return {
-    taskName: "Reviewer",
-    model: "default",
-    prompt: "Prompt",
-    promptFile: "/tmp/prompt.txt",
-    outputFormat: '{"issues":[]}',
-    ...overrides,
-  }
-}
+}));
 
 describe("coderabbit adapter", () => {
   beforeEach(() => {
-    execAbortableMock.mockReset()
-  })
+    execAbortableMock.mockReset();
+  });
 
   it("passes diff flags through to coderabbit", async () => {
-    execAbortableMock.mockResolvedValue({ stdout: "review", stderr: "" })
+    execAbortableMock.mockResolvedValue({ stdout: "review", stderr: "" });
 
-    const runtime = createCodeRabbitRuntime()
+    const runtime = createCodeRabbitRuntime();
     await runtime.execute(
       buildRequest({
         diff: {
@@ -40,12 +29,21 @@ describe("coderabbit adapter", () => {
           baseCommit: "abc123",
         },
       }),
-    )
+    );
 
     expect(execAbortableMock).toHaveBeenCalledWith(
       "cr",
-      ["review", "--prompt-only", "--type", "committed", "--base", "main", "--base-commit", "abc123"],
+      [
+        "review",
+        "--prompt-only",
+        "--type",
+        "committed",
+        "--base",
+        "main",
+        "--base-commit",
+        "abc123",
+      ],
       expect.any(Object),
-    )
-  })
-})
+    );
+  });
+});
