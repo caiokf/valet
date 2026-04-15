@@ -1,11 +1,100 @@
-import { readFileSync } from "node:fs"
-import { execAbortable } from "./exec.js"
-import type { PreflightResult, RawExecutionOutput, RuntimeAdapter, RuntimeExecutionRequest, RuntimeHealth } from "./types.js"
+import { readFileSync } from "node:fs";
+import { execAbortable } from "./exec.js";
+import type {
+  PreflightResult,
+  RawExecutionOutput,
+  RuntimeAdapter,
+  RuntimeExecutionRequest,
+  RuntimeHealth,
+} from "./types.js";
 
-/**
- * Provides default implementations for validateModel and preflight.
- * Each runtime calls this with its adapter object to fill in shared behavior.
- */
+export const EXEC_DEFAULTS = {
+  maxBuffer: 50 * 1024 * 1024,
+  defaultTimeout: 10 * 60 * 1000,
+  healthTimeout: 5000,
+  preflightTimeout: 3000,
+} as const;
+
+export function buildEnv(overrides?: Record<string, string>): Record<string, string> | undefined {
+  if (!overrides || Object.keys(overrides).length === 0) {
+    return undefined;
+  }
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v !== undefined) {
+      env[k] = v;
+    }
+  }
+  for (const [k, v] of Object.entries(overrides)) {
+    env[k] = v;
+  }
+  return env;
+}
+
+export function extractVersion(raw: string): string {
+  const match = raw.match(/(\d+\.\d+\.\d+)/);
+  return match ? match[1] : raw;
+}
+
+export async function runCommand(
+  request: RuntimeExecutionRequest,
+  cmd: string,
+  args: string[],
+  opts: { stdin?: string; timeoutMs?: number } = {},
+): Promise<RawExecutionOutput> {
+  const start = performance.now();
+  const env = buildEnv(request.overrides?.env);
+  try {
+    const { stdout } = await execAbortable(cmd, args, {
+      ...(env ? { env } : {}),
+      maxBuffer: EXEC_DEFAULTS.maxBuffer,
+      timeout: opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout,
+      signal: request.signal,
+      stdin: opts.stdin,
+    });
+    return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
+  } catch (error) {
+    const err = error as { stdout?: string; code?: number };
+    return { raw: err.stdout ?? String(error), exitCode: err.code ?? 1, durationMs: performance.now() - start };
+  }
+}
+
+export function buildExpectScript(promptFile: string, spawnCmd: string, timeoutSecs: number): string {
+  return [
+    `set f [open "${escapeTcl(promptFile)}" r]`,
+    `set prompt [read $f]`,
+    `close $f`,
+    `spawn ${spawnCmd}`,
+    `set timeout ${Math.ceil(timeoutSecs)}`,
+    `expect eof`,
+  ].join("; ");
+}
+
+export async function runExpectCommand(
+  request: RuntimeExecutionRequest,
+  spawnCmd: string,
+  opts: { extraArgs?: string[]; timeoutMs?: number } = {},
+): Promise<RawExecutionOutput> {
+  const timeoutSecs = (opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout) / 1000;
+  const extraArgs = (opts.extraArgs ?? []).map(escapeTcl).join(" ");
+  const fullSpawnCmd = [spawnCmd, extraArgs].filter(Boolean).join(" ");
+  const script = buildExpectScript(request.promptFile, fullSpawnCmd, timeoutSecs);
+  const env = buildEnv(request.overrides?.env);
+  const start = performance.now();
+  try {
+    const { stdout } = await execAbortable("expect", ["-c", script], {
+      ...(env ? { env } : {}),
+      maxBuffer: EXEC_DEFAULTS.maxBuffer,
+      timeout: opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout,
+      signal: request.signal,
+    });
+    return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
+  } catch (error) {
+    const err = error as { stdout?: string; code?: number };
+    return { raw: err.stdout ?? String(error), exitCode: err.code ?? 1, durationMs: performance.now() - start };
+  }
+}
+
 export function withDefaults(
   adapter: Omit<RuntimeAdapter, "validateModel" | "preflight">,
 ): RuntimeAdapter {
@@ -13,98 +102,98 @@ export function withDefaults(
     ...adapter,
 
     validateModel(model: string): boolean {
-      return adapter.models.includes(model)
+      return adapter.models.includes(model);
     },
 
-    async preflight(request: Pick<RuntimeExecutionRequest, "model" | "overrides">): Promise<PreflightResult> {
-      const issues: string[] = []
+    async preflight(
+      request: Pick<RuntimeExecutionRequest, "model" | "overrides">,
+    ): Promise<PreflightResult> {
+      const issues: string[] = [];
 
-      // Check model validity
       if (!adapter.models.includes(request.model) && request.model !== "default") {
-        issues.push(`Model "${request.model}" is not in ${adapter.name}'s supported models: ${adapter.models.join(", ")}`)
+        issues.push(
+          `Model "${request.model}" is not in ${adapter.name}'s supported models: ${adapter.models.join(", ")}`,
+        );
       }
 
-      // Check installation
-      const cmd = request.overrides?.command ?? adapter.capabilities.command
+      const cmd = request.overrides?.command ?? adapter.capabilities.command;
       try {
-        await execAbortable("which", [cmd.split(" ")[0]], { timeout: 3000 })
+        await execAbortable("which", [cmd.split(" ")[0]], { timeout: EXEC_DEFAULTS.preflightTimeout });
       } catch {
-        issues.push(`Command "${cmd}" not found in PATH`)
+        issues.push(`Command "${cmd}" not found in PATH`);
       }
 
-      return { ok: issues.length === 0, issues }
+      return { ok: issues.length === 0, issues };
     },
-  }
+  };
 }
 
-/**
- * Shared stdin-based execution for adapters that pipe the prompt via stdin.
- * Each adapter provides its own cmd and args; this handles the common
- * try/catch, timing, env merging, and output shape.
- */
 export async function executeViaStdin(
   request: RuntimeExecutionRequest,
   opts: { cmd: string; args: string[] },
 ): Promise<RawExecutionOutput> {
-  const start = performance.now()
-  const prompt = readFileSync(request.promptFile, "utf-8")
-  const env = request.overrides?.env && Object.keys(request.overrides.env).length > 0
-    ? { ...process.env, ...request.overrides.env }
-    : undefined
+  const start = performance.now();
+  const prompt = readFileSync(request.promptFile, "utf-8");
+  const env = buildEnv(request.overrides?.env);
 
   try {
     const { stdout } = await execAbortable(opts.cmd, opts.args, {
       ...(env ? { env } : {}),
-      maxBuffer: 50 * 1024 * 1024,
-      timeout: 10 * 60 * 1000,
+      maxBuffer: EXEC_DEFAULTS.maxBuffer,
+      timeout: EXEC_DEFAULTS.defaultTimeout,
       signal: request.signal,
       stdin: prompt,
-    })
-    return { raw: stdout, exitCode: 0, durationMs: performance.now() - start }
+    });
+    return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
   } catch (error) {
-    const err = error as { stdout?: string; code?: number }
-    return { raw: err.stdout ?? String(error), exitCode: err.code ?? 1, durationMs: performance.now() - start }
+    const err = error as { stdout?: string; code?: number };
+    return {
+      raw: err.stdout ?? String(error),
+      exitCode: err.code ?? 1,
+      durationMs: performance.now() - start,
+    };
   }
 }
 
-/**
- * Shared health check: verifies installation and fetches version.
- * Returns partial health data; callers add auth-specific fields.
- */
 export async function checkInstalled(
   name: string,
   command: string,
   versionArgs: string[] = ["--version"],
-): Promise<{ installed: false; health: RuntimeHealth } | { installed: true; version: string | null }> {
+): Promise<
+  { installed: false; health: RuntimeHealth } | { installed: true; version: string | null }
+> {
   try {
-    await execAbortable("which", [command], { timeout: 5000 })
+    await execAbortable("which", [command], { timeout: EXEC_DEFAULTS.healthTimeout });
   } catch {
     return {
       installed: false,
-      health: { name, command, installed: false, version: null, authenticated: "unknown", authDetail: "not installed", error: null },
-    }
+      health: {
+        name,
+        command,
+        installed: false,
+        version: null,
+        authenticated: "unknown",
+        authDetail: "not installed",
+        error: null,
+      },
+    };
   }
 
-  let version: string | null = null
+  let version: string | null = null;
   try {
-    const result = await execAbortable(command, versionArgs, { timeout: 5000 })
-    version = result.stdout.trim()
+    const result = await execAbortable(command, versionArgs, { timeout: EXEC_DEFAULTS.healthTimeout });
+    version = result.stdout.trim();
   } catch {}
 
-  return { installed: true, version }
+  return { installed: true, version };
 }
 
-/**
- * Escape a string for safe use inside Tcl double-quoted strings.
- * Neutralizes brackets, dollar signs, and backslashes that Tcl interprets.
- */
 export function escapeTcl(s: string): string {
-  return s.replace(/[\\$\[\]{}]/g, "\\$&")
+  // biome-ignore lint: Tcl interprets these characters specially inside double-quoted strings
+  return s.replace(/[\\$\[\]{}]/g, "\\$&");
 }
 
-/**
- * Strip ANSI escape sequences and carriage returns from CLI output.
- */
 export function stripAnsi(str: string): string {
-  return str.replace(/\x1B\[[0-9;]*[a-zA-Z]|\x1B\][^\x07]*\x07|\x1B\[[\?]?[0-9;]*[a-zA-Z]/g, "").replace(/\r/g, "")
+  // biome-ignore lint: ANSI escape sequences contain literal control characters that must be matched with hex escapes
+  return str.replace(/\x1B\[[0-9;]*[a-zA-Z]|\x1B\][^\x07]*\x07|\x1B\[[\?]?[0-9;]*[a-zA-Z]/g, "").replace(/\r/g, "");
 }
