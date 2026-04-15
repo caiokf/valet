@@ -16,7 +16,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "prepare": "tsup",
+    "prepublishOnly": "tsup",
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",

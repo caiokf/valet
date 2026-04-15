@@ -1,5 +1,9 @@
 # valet
 
+[![CI](https://github.com/caiokf/valet/actions/workflows/ci.yml/badge.svg)](https://github.com/caiokf/valet/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/valet)](https://www.npmjs.com/package/valet)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ```
       ╦ ╦┌─┐┌┐ ╔═╗╔═╗   ╔╦╗┌─┐┌┐┌┌─┐┌─┐┬  ┌─┐
       ║║║├┤ ├┴┐║ ║╚═╗───║║║├┤ │││└─┐│  │  ├┤
@@ -52,10 +56,10 @@ claude.validateModel("sonnet") // true
 
 // Execute a prompt
 const result = await claude.execute({
+  taskName: "review-bugs",
   prompt: "Review this code for bugs",
   model: "sonnet",
-  cwd: "/path/to/project",
-  abortSignal: undefined,
+  promptFile: "/path/to/prompt.txt",
 })
 // { stdout: "...", stderr: "", exitCode: 0, durationMs: 1234 }
 ```
