@@ -1,0 +1,53 @@
+{
+  "name": "valet",
+  "version": "0.1.0",
+  "description": "Unified adapter layer for headlessly driving AI coding CLI tools",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "adapter",
+    "runtime",
+    "claude",
+    "codex",
+    "gemini",
+    "copilot",
+    "coderabbit",
+    "opencode",
+    "headless",
+    "automation"
+  ],
+  "author": "caiokf",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caiokf/valet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/caiokf/valet/issues"
+  },
+  "homepage": "https://github.com/caiokf/valet#readme",
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "tsup": "^8.4.0",
+    "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
