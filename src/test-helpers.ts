@@ -1,6 +1,8 @@
-import type { RuntimeExecutionRequest } from "./types.js"
+import type { RuntimeExecutionRequest } from "./types.js";
 
-export function buildRequest(overrides: Partial<RuntimeExecutionRequest> = {}): RuntimeExecutionRequest {
+export function buildRequest(
+  overrides: Partial<RuntimeExecutionRequest> = {},
+): RuntimeExecutionRequest {
   return {
     taskName: "Reviewer",
     model: "default",
@@ -8,5 +10,5 @@ export function buildRequest(overrides: Partial<RuntimeExecutionRequest> = {}): 
     promptFile: "/tmp/prompt.txt",
     outputFormat: '{"issues":[]}',
     ...overrides,
-  }
+  };
 }

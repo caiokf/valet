@@ -55,16 +55,24 @@ export async function runCommand(
     return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
   } catch (error) {
     const err = error as { stdout?: string; code?: number };
-    return { raw: err.stdout ?? String(error), exitCode: err.code ?? 1, durationMs: performance.now() - start };
+    return {
+      raw: err.stdout ?? String(error),
+      exitCode: err.code ?? 1,
+      durationMs: performance.now() - start,
+    };
   }
 }
 
-export function buildExpectScript(promptFile: string, spawnCmd: string, timeoutSecs: number): string {
+export function buildExpectScript(
+  promptFile: string,
+  spawnCmd: string,
+  timeoutSecs: number,
+): string {
   return [
     `set f [open "${escapeTcl(promptFile)}" r]`,
     `set prompt [read $f]`,
     `close $f`,
-    `spawn ${spawnCmd}`,
+    `spawn ${spawnCmd} $prompt`,
     `set timeout ${Math.ceil(timeoutSecs)}`,
     `expect eof`,
   ].join("; ");
@@ -91,7 +99,11 @@ export async function runExpectCommand(
     return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
   } catch (error) {
     const err = error as { stdout?: string; code?: number };
-    return { raw: err.stdout ?? String(error), exitCode: err.code ?? 1, durationMs: performance.now() - start };
+    return {
+      raw: err.stdout ?? String(error),
+      exitCode: err.code ?? 1,
+      durationMs: performance.now() - start,
+    };
   }
 }
 
@@ -118,7 +130,9 @@ export function withDefaults(
 
       const cmd = request.overrides?.command ?? adapter.capabilities.command;
       try {
-        await execAbortable("which", [cmd.split(" ")[0]], { timeout: EXEC_DEFAULTS.preflightTimeout });
+        await execAbortable("which", [cmd.split(" ")[0]], {
+          timeout: EXEC_DEFAULTS.preflightTimeout,
+        });
       } catch {
         issues.push(`Command "${cmd}" not found in PATH`);
       }
@@ -181,7 +195,9 @@ export async function checkInstalled(
 
   let version: string | null = null;
   try {
-    const result = await execAbortable(command, versionArgs, { timeout: EXEC_DEFAULTS.healthTimeout });
+    const result = await execAbortable(command, versionArgs, {
+      timeout: EXEC_DEFAULTS.healthTimeout,
+    });
     version = result.stdout.trim();
   } catch {}
 

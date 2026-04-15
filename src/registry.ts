@@ -1,5 +1,5 @@
-import type { RuntimeAdapter } from "./types.js"
-import * as adapters from "./adapters/index.js"
+import type { RuntimeAdapter } from "./types.js";
+import * as adapters from "./adapters/index.js";
 
 /**
  * Auto-discovered runtime registry.
@@ -11,21 +11,21 @@ import * as adapters from "./adapters/index.js"
  */
 const runtimes = new Map<string, () => RuntimeAdapter>(
   Object.entries(adapters).map(([name, factory]) => [name, factory as () => RuntimeAdapter]),
-)
+);
 
 export function getRuntime(name: string): RuntimeAdapter {
-  const factory = runtimes.get(name)
+  const factory = runtimes.get(name);
   if (!factory) {
-    const available = [...runtimes.keys()].join(", ")
-    throw new Error(`Unknown runtime: "${name}". Available: ${available}`)
+    const available = [...runtimes.keys()].join(", ");
+    throw new Error(`Unknown runtime: "${name}". Available: ${available}`);
   }
-  return factory()
+  return factory();
 }
 
 export function getAllRuntimes(): RuntimeAdapter[] {
-  return [...runtimes.entries()].map(([, factory]) => factory())
+  return [...runtimes.entries()].map(([, factory]) => factory());
 }
 
 export function getRuntimeNames(): string[] {
-  return [...runtimes.keys()]
+  return [...runtimes.keys()];
 }

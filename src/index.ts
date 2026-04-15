@@ -1,9 +1,9 @@
-export { execAbortable } from "./exec.js"
+export { execAbortable } from "./exec.js";
 export {
   getAllRuntimes,
   getRuntime,
   getRuntimeNames,
-} from "./registry.js"
+} from "./registry.js";
 export type {
   AuthMethod,
   DiffInput,
@@ -16,4 +16,4 @@ export type {
   RuntimeHealth,
   RuntimeOverrides,
   RuntimeType,
-} from "./types.js"
+} from "./types.js";

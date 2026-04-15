@@ -1,8 +1,6 @@
-import fs from "node:fs"
-import os from "node:os"
-import path from "node:path"
-import { withDefaults, executeViaStdin, checkInstalled } from "../adapter-base.js"
-import type { RuntimeAdapter, RuntimeHealth } from "../types.js"
+import { existsSync, readdirSync } from "node:fs";
+import { withDefaults, executeViaStdin, checkInstalled, extractVersion } from "../adapter-base.js";
+import type { RuntimeAdapter, RuntimeHealth } from "../types.js";
 
 export function createKimiRuntime(): RuntimeAdapter {
   return withDefaults({
@@ -18,51 +16,58 @@ export function createKimiRuntime(): RuntimeAdapter {
       supportsModelSelection: false,
       authMethods: [
         { type: "env", keys: ["MOONSHOT_API_KEY"] },
-        { type: "auth-file", path: "~/.kimi/credentials", description: "Kimi credentials directory" },
+        {
+          type: "auth-file",
+          path: "~/.kimi/credentials",
+          description: "Kimi credentials directory",
+        },
       ],
       relevantEnvVars: ["MOONSHOT_API_KEY"],
     },
 
     async execute(request) {
-      const cmd = request.overrides?.command ?? "kimi"
-      const args = ["--print", ...(request.overrides?.extraArgs ?? [])]
-      return executeViaStdin(request, { cmd, args })
+      const cmd = request.overrides?.command ?? "kimi";
+      const args = ["--print", ...(request.overrides?.extraArgs ?? [])];
+      return executeViaStdin(request, { cmd, args });
     },
 
     async healthCheck(): Promise<RuntimeHealth> {
-      const check = await checkInstalled("kimi", "kimi")
-      if (!check.installed) return check.health
+      const check = await checkInstalled("kimi", "kimi");
+      if (!check.installed) return check.health;
 
-      // Extract semver from version string
-      let version = check.version
-      if (version) {
-        const match = version.match(/(\d+\.\d+\.\d+)/)
-        version = match ? match[1] : version
-      }
+      const version = extractVersion(check.version ?? "");
 
-      let authenticated: "yes" | "no" | "unknown" = "no"
-      let authDetail = ""
+      let authenticated: "yes" | "no" | "unknown" = "no";
+      let authDetail = "";
 
       if (process.env.MOONSHOT_API_KEY) {
-        authenticated = "yes"
-        authDetail = "env: MOONSHOT_API_KEY"
+        authenticated = "yes";
+        authDetail = "env: MOONSHOT_API_KEY";
       } else {
-        const credDir = path.join(os.homedir(), ".kimi", "credentials")
+        const credDir = `${process.env.HOME}/.kimi/credentials`;
         try {
-          if (fs.existsSync(credDir) && fs.readdirSync(credDir).length > 0) {
-            authenticated = "yes"
-            authDetail = "~/.kimi/credentials"
+          if (existsSync(credDir) && readdirSync(credDir).length > 0) {
+            authenticated = "yes";
+            authDetail = "~/.kimi/credentials";
           }
         } catch {}
       }
 
       if (authenticated === "no") {
-        authDetail = "no MOONSHOT_API_KEY and no ~/.kimi/credentials"
+        authDetail = "no MOONSHOT_API_KEY and no ~/.kimi/credentials";
       }
 
-      return { name: "kimi", command: "kimi", installed: true, version, authenticated, authDetail, error: null }
+      return {
+        name: "kimi",
+        command: "kimi",
+        installed: true,
+        version,
+        authenticated,
+        authDetail,
+        error: null,
+      };
     },
-  })
+  });
 }
 
-export const createAdapter = createKimiRuntime
+export const createAdapter = createKimiRuntime;
