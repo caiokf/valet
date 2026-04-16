@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runAdapterContractTests } from "../adapter-contract-tests.js";
-import { buildRequest } from "../test-helpers.js";
+import { runAdapterContractTests } from "../tests/adapter-contract-tests.js";
+import { buildRequest } from "../tests/test-helpers.js";
 import { createKimiRuntime } from "./kimi.js";
 
 const { execAbortableMock, readFileSyncMock } = vi.hoisted(() => ({

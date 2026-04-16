@@ -1,21 +1,21 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createClaudeRuntime } from "./adapters/claude.js";
-import { createCodexRuntime } from "./adapters/codex.js";
-import { createGeminiRuntime } from "./adapters/gemini.js";
-import { createKimiRuntime } from "./adapters/kimi.js";
-import { createCodeRabbitRuntime } from "./adapters/coderabbit.js";
-import { createOpenCodeRuntime } from "./adapters/opencode.js";
-import { createPiRuntime } from "./adapters/pi.js";
-import { createDroidRuntime } from "./adapters/droid.js";
-import { createMastraCodeRuntime } from "./adapters/mastracode.js";
-import { createCopilotRuntime } from "./adapters/copilot.js";
+import { createClaudeRuntime } from "../adapters/claude.js";
+import { createCodexRuntime } from "../adapters/codex.js";
+import { createGeminiRuntime } from "../adapters/gemini.js";
+import { createKimiRuntime } from "../adapters/kimi.js";
+import { createCodeRabbitRuntime } from "../adapters/coderabbit.js";
+import { createOpenCodeRuntime } from "../adapters/opencode.js";
+import { createPiRuntime } from "../adapters/pi.js";
+import { createDroidRuntime } from "../adapters/droid.js";
+import { createMastraCodeRuntime } from "../adapters/mastracode.js";
+import { createCopilotRuntime } from "../adapters/copilot.js";
 
 const { execAbortableMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
 }));
 
-vi.mock("./exec.js", () => ({
+vi.mock("../exec.js", () => ({
   execAbortable: execAbortableMock,
 }));
 

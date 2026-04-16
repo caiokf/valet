@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAllRuntimes, getRuntimeNames } from "./registry.js";
+import { getAllRuntimes, getRuntimeNames } from "../registry.js";
 
 const runtimes = getAllRuntimes();
 

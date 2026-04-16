@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAllRuntimes, getRuntime, getRuntimeNames } from "./registry.js";
+import { getAllRuntimes, getRuntime, getRuntimeNames } from "../registry.js";
 
 describe("registry", () => {
   it("returns the expected runtime names", () => {

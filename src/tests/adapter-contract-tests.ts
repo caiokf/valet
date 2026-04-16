@@ -1,7 +1,7 @@
 import type { Mock } from "vitest";
 import { describe, expect, it } from "vitest";
 import { buildRequest } from "./test-helpers.js";
-import type { RuntimeAdapter } from "./types.js";
+import type { RuntimeAdapter } from "../types.js";
 
 export interface AdapterTestConfig {
   name: string;

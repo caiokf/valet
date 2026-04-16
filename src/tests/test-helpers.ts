@@ -1,4 +1,4 @@
-import type { RuntimeExecutionRequest } from "./types.js";
+import type { RuntimeExecutionRequest } from "../types.js";
 
 export function buildRequest(
   overrides: Partial<RuntimeExecutionRequest> = {},

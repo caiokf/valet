@@ -12,8 +12,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { getAllRuntimes } from "./registry.js";
-import type { RuntimeAdapter, RuntimeHealth } from "./types.js";
+import { getAllRuntimes } from "../registry.js";
+import type { RuntimeAdapter, RuntimeHealth } from "../types.js";
 
 const SMOKE = process.env.SMOKE === "1";
 const describeSmoke = SMOKE ? describe : describe.skip;
