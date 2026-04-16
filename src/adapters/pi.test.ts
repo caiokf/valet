@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPiRuntime } from "./pi.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createPiRuntime } from "./pi.js";
 
 const { execAbortableMock, readFileSyncMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -12,17 +13,24 @@ vi.mock("../exec.js", () => ({
 }));
 
 vi.mock("node:fs", () => ({
+  default: { readFileSync: readFileSyncMock },
   readFileSync: readFileSyncMock,
 }));
+
+runAdapterContractTests({
+  name: "pi",
+  createRuntime: createPiRuntime,
+  defaultModel: "anthropic/claude-sonnet-4-6",
+  mockExec: () => execAbortableMock,
+});
 
 describe("pi adapter", () => {
   beforeEach(() => {
     execAbortableMock.mockReset();
-    readFileSyncMock.mockReset();
+    readFileSyncMock.mockReset().mockReturnValue("full prompt");
   });
 
   it("passes prompt via stdin to pi with model flag", async () => {
-    readFileSyncMock.mockReturnValue("full prompt");
     execAbortableMock.mockResolvedValue({ stdout: "pi-output", stderr: "" });
 
     const runtime = createPiRuntime();
@@ -38,7 +46,6 @@ describe("pi adapter", () => {
   });
 
   it("passes extra args through for stdin-based runtimes", async () => {
-    readFileSyncMock.mockReturnValue("prompt");
     execAbortableMock.mockResolvedValue({ stdout: "ok", stderr: "" });
 
     const runtime = createPiRuntime();

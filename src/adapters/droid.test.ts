@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createDroidRuntime } from "./droid.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createDroidRuntime } from "./droid.js";
 
 const { execAbortableMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -9,6 +10,13 @@ const { execAbortableMock } = vi.hoisted(() => ({
 vi.mock("../exec.js", () => ({
   execAbortable: execAbortableMock,
 }));
+
+runAdapterContractTests({
+  name: "droid",
+  createRuntime: createDroidRuntime,
+  defaultModel: "claude-sonnet-4-6",
+  mockExec: () => execAbortableMock,
+});
 
 describe("droid adapter", () => {
   beforeEach(() => {

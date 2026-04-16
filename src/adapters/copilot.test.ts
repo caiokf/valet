@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createCopilotRuntime } from "./copilot.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createCopilotRuntime } from "./copilot.js";
 
 const { execAbortableMock, readFileSyncMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -12,17 +13,26 @@ vi.mock("../exec.js", () => ({
 }));
 
 vi.mock("node:fs", () => ({
+  default: {
+    readFileSync: readFileSyncMock,
+  },
   readFileSync: readFileSyncMock,
 }));
+
+runAdapterContractTests({
+  name: "copilot",
+  createRuntime: createCopilotRuntime,
+  defaultModel: "gpt-5.2",
+  mockExec: () => execAbortableMock,
+});
 
 describe("copilot adapter", () => {
   beforeEach(() => {
     execAbortableMock.mockReset();
-    readFileSyncMock.mockReset();
+    readFileSyncMock.mockReset().mockReturnValue("review this code");
   });
 
   it("passes prompt to copilot via gh wrapper with safety flags", async () => {
-    readFileSyncMock.mockReturnValue("review this code");
     execAbortableMock.mockResolvedValue({ stdout: "copilot-output", stderr: "" });
 
     const runtime = createCopilotRuntime();
@@ -49,7 +59,6 @@ describe("copilot adapter", () => {
   });
 
   it("copilot skips gh wrapper when command is overridden", async () => {
-    readFileSyncMock.mockReturnValue("review this code");
     execAbortableMock.mockResolvedValue({ stdout: "copilot-output", stderr: "" });
 
     const runtime = createCopilotRuntime();

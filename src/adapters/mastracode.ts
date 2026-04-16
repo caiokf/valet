@@ -1,7 +1,6 @@
-import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { execAbortable } from "../exec.js";
-import { withDefaults, runExpectCommand, EXEC_DEFAULTS } from "../adapter-base.js";
+import fs from "node:fs";
+import os from "node:os";
+import { checkInstalled, runExpectCommand, stripAnsi, withDefaults } from "../adapter-base.js";
 import type {
   RawExecutionOutput,
   RuntimeAdapter,
@@ -40,37 +39,13 @@ export function createMastraCodeRuntime(): RuntimeAdapter {
       const result = await runExpectCommand(request, `${cmd} --model ${request.model} -p`, {
         extraArgs: request.overrides?.extraArgs,
       });
-      return {
-        ...result,
-        // biome-ignore lint: mastracode outputs ANSI codes that must be stripped
-        raw: result.raw.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "").replace(/\r/g, ""),
-      };
+      return { ...result, raw: stripAnsi(result.raw) };
     },
 
     async healthCheck(): Promise<RuntimeHealth> {
       const name = "mastracode";
-      try {
-        await execAbortable("which", ["mastracode"], { timeout: EXEC_DEFAULTS.healthTimeout });
-      } catch {
-        return {
-          name,
-          command: "mastracode",
-          installed: false,
-          version: null,
-          authenticated: "unknown",
-          authDetail: "not installed",
-          error: null,
-        };
-      }
-
-      let version: string | null = null;
-      try {
-        await execAbortable("mastracode", ["--version"], { timeout: 2000 });
-      } catch (e) {
-        const err = e as { stdout?: string; stderr?: string };
-        const vMatch = ((err.stdout ?? "") + (err.stderr ?? "")).match(/v?(\d+\.\d+\.\d+)/);
-        version = vMatch ? vMatch[1] : null;
-      }
+      const check = await checkInstalled(name, "mastracode");
+      if (!check.installed) return check.health;
 
       let authenticated: "yes" | "no" | "unknown" = "no";
       let authDetail = "";
@@ -82,8 +57,8 @@ export function createMastraCodeRuntime(): RuntimeAdapter {
         authenticated = "yes";
         authDetail = "env: OPENAI_API_KEY";
       } else {
-        const dbPath = `${homedir()}/.mastracode`;
-        if (existsSync(dbPath)) {
+        const dbPath = `${os.homedir()}/.mastracode`;
+        if (fs.existsSync(dbPath)) {
           authenticated = "unknown";
           authDetail = "~/.mastracode exists (use /login in TUI to authenticate)";
         }
@@ -97,7 +72,7 @@ export function createMastraCodeRuntime(): RuntimeAdapter {
         name,
         command: "mastracode",
         installed: true,
-        version,
+        version: check.version,
         authenticated,
         authDetail,
         error: null,

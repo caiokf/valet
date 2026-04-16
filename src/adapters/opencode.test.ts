@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createOpenCodeRuntime } from "./opencode.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createOpenCodeRuntime } from "./opencode.js";
 
 const { execAbortableMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -9,6 +10,13 @@ const { execAbortableMock } = vi.hoisted(() => ({
 vi.mock("../exec.js", () => ({
   execAbortable: execAbortableMock,
 }));
+
+runAdapterContractTests({
+  name: "opencode",
+  createRuntime: createOpenCodeRuntime,
+  defaultModel: "zai-coding-plan/glm-5",
+  mockExec: () => execAbortableMock,
+});
 
 describe("opencode adapter", () => {
   beforeEach(() => {

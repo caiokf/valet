@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createKimiRuntime } from "./kimi.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createKimiRuntime } from "./kimi.js";
 
 const { execAbortableMock, readFileSyncMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -12,17 +13,24 @@ vi.mock("../exec.js", () => ({
 }));
 
 vi.mock("node:fs", () => ({
+  default: { readFileSync: readFileSyncMock },
   readFileSync: readFileSyncMock,
 }));
+
+runAdapterContractTests({
+  name: "kimi",
+  createRuntime: createKimiRuntime,
+  defaultModel: "kimi-k2.5",
+  mockExec: () => execAbortableMock,
+});
 
 describe("kimi adapter", () => {
   beforeEach(() => {
     execAbortableMock.mockReset();
-    readFileSyncMock.mockReset();
+    readFileSyncMock.mockReset().mockReturnValue("full prompt");
   });
 
   it("passes prompt file contents to kimi", async () => {
-    readFileSyncMock.mockReturnValue("full prompt");
     execAbortableMock.mockResolvedValue({ stdout: "kimi-output", stderr: "" });
 
     const runtime = createKimiRuntime();

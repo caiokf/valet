@@ -1,6 +1,7 @@
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import fs from "node:fs";
+import os from "node:os";
+import { EXEC_DEFAULTS, runCommand, withDefaults } from "../adapter-base.js";
 import { execAbortable } from "../exec.js";
-import { withDefaults, runCommand, EXEC_DEFAULTS } from "../adapter-base.js";
 import type {
   RawExecutionOutput,
   RuntimeAdapter,
@@ -30,7 +31,7 @@ export function createCopilotRuntime(): RuntimeAdapter {
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
       const cmd = request.overrides?.command ?? "gh";
-      const prompt = readFileSync(request.promptFile, "utf-8");
+      const prompt = fs.readFileSync(request.promptFile, "utf-8");
 
       const baseArgs = [
         "-p",
@@ -109,11 +110,11 @@ export function createCopilotRuntime(): RuntimeAdapter {
         } catch {}
 
         if (authenticated === "no") {
-          const copilotDir = `${process.env.HOME}/.copilot`;
+          const copilotDir = `${os.homedir()}/.copilot`;
           try {
             if (
-              existsSync(copilotDir) &&
-              readdirSync(copilotDir).some((f) => f.includes("config") || f.includes("auth"))
+              fs.existsSync(copilotDir) &&
+              fs.readdirSync(copilotDir).some((f) => f.includes("config") || f.includes("auth"))
             ) {
               authenticated = "unknown";
               authDetail = "~/.copilot exists (run: copilot login)";

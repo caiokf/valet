@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createGeminiRuntime } from "./gemini.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createGeminiRuntime } from "./gemini.js";
 
 const { execAbortableMock, readFileSyncMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -12,17 +13,24 @@ vi.mock("../exec.js", () => ({
 }));
 
 vi.mock("node:fs", () => ({
+  default: { readFileSync: readFileSyncMock },
   readFileSync: readFileSyncMock,
 }));
+
+runAdapterContractTests({
+  name: "gemini",
+  createRuntime: createGeminiRuntime,
+  defaultModel: "gemini-2.5-pro",
+  mockExec: () => execAbortableMock,
+});
 
 describe("gemini adapter", () => {
   beforeEach(() => {
     execAbortableMock.mockReset();
-    readFileSyncMock.mockReset();
+    readFileSyncMock.mockReset().mockReturnValue("full prompt");
   });
 
   it("passes prompt file contents to gemini", async () => {
-    readFileSyncMock.mockReturnValue("full prompt");
     execAbortableMock.mockResolvedValue({ stdout: "gemini-output", stderr: "" });
 
     const runtime = createGeminiRuntime();

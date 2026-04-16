@@ -1,5 +1,6 @@
-import { execAbortable } from "../exec.js";
-import { withDefaults, escapeTcl } from "../adapter-base.js";
+import fs from "node:fs";
+import os from "node:os";
+import { checkInstalled, runExpectCommand, stripAnsi, withDefaults } from "../adapter-base.js";
 import type {
   RawExecutionOutput,
   RuntimeAdapter,
@@ -41,94 +42,31 @@ export function createOpenCodeRuntime(): RuntimeAdapter {
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
-      const start = performance.now();
       const cmd = request.overrides?.command ?? "opencode";
-      const extraArgs = (request.overrides?.extraArgs ?? []).map(escapeTcl).join(" ");
-      const spawnCmd = [
-        `spawn ${cmd} run --format json -m ${escapeTcl(request.model)}`,
-        extraArgs,
-        "$prompt",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      const expectScript = [
-        `set f [open "${escapeTcl(request.promptFile)}" r]`,
-        `set prompt [read $f]`,
-        `close $f`,
-        spawnCmd,
-        `set timeout ${Math.ceil(10 * 60)}`,
-        `expect eof`,
-      ].join("; ");
+      const spawnCmd = `${cmd} run --format json -m ${request.model}`;
+      const result = await runExpectCommand(request, spawnCmd, {
+        extraArgs: request.overrides?.extraArgs,
+      });
+      const cleaned = stripAnsi(result.raw);
+      const { text, error: apiError } = parseOutput(cleaned);
 
-      const env =
-        request.overrides?.env && Object.keys(request.overrides.env).length > 0
-          ? { ...process.env, ...request.overrides.env }
-          : undefined;
-
-      try {
-        const { stdout } = await execAbortable("expect", ["-c", expectScript], {
-          ...(env ? { env } : {}),
-          maxBuffer: 50 * 1024 * 1024,
-          timeout: 10 * 60 * 1000,
-          signal: request.signal,
-        });
-
-        const { text, error: apiError } = parseOutput(stdout);
-
-        if (apiError) {
-          return {
-            raw: `OpenCode error: ${apiError}`,
-            exitCode: 1,
-            durationMs: performance.now() - start,
-          };
-        }
-
-        return {
-          raw: text,
-          exitCode: 0,
-          durationMs: performance.now() - start,
-        };
-      } catch (error) {
-        const err = error as { stdout?: string; code?: number };
-        const parsed = err.stdout ? parseOutput(err.stdout) : null;
-        return {
-          raw: parsed?.error || parsed?.text || String(error),
-          exitCode: err.code ?? 1,
-          durationMs: performance.now() - start,
-        };
+      if (apiError) {
+        return { ...result, raw: `OpenCode error: ${apiError}`, exitCode: 1 };
       }
+
+      return { ...result, raw: text };
     },
 
     async healthCheck(): Promise<RuntimeHealth> {
       const name = "opencode";
-
-      try {
-        await execAbortable("which", ["opencode"], { timeout: 5000 });
-      } catch {
-        return {
-          name,
-          command: "opencode",
-          installed: false,
-          version: null,
-          authenticated: "unknown",
-          authDetail: "not installed",
-          error: null,
-        };
-      }
-
-      let version: string | null = null;
-      try {
-        const result = await execAbortable("opencode", ["--version"], { timeout: 5000 });
-        version = result.stdout.trim();
-      } catch {}
+      const check = await checkInstalled(name, "opencode");
+      if (!check.installed) return check.health;
 
       let authenticated: "yes" | "no" | "unknown" = "unknown";
       let authDetail = "";
       try {
-        const { existsSync } = await import("node:fs");
-        const { homedir } = await import("node:os");
-        const authPath = `${homedir()}/.local/share/opencode/auth.json`;
-        if (existsSync(authPath)) {
+        const authPath = `${os.homedir()}/.local/share/opencode/auth.json`;
+        if (fs.existsSync(authPath)) {
           authenticated = "yes";
           authDetail = "~/.local/share/opencode/auth.json";
         } else {
@@ -144,7 +82,7 @@ export function createOpenCodeRuntime(): RuntimeAdapter {
         name,
         command: "opencode",
         installed: true,
-        version,
+        version: check.version,
         authenticated,
         authDetail,
         error: null,
@@ -156,10 +94,9 @@ export function createOpenCodeRuntime(): RuntimeAdapter {
 type ParsedOutput = { text: string; error?: string };
 
 function parseOutput(stdout: string): ParsedOutput {
-  const clean = stdout.replace(/\r/g, "");
   const parts: string[] = [];
   let error: string | undefined;
-  for (const line of clean.split("\n")) {
+  for (const line of stdout.split("\n")) {
     if (!line.trim()) continue;
     try {
       const event = JSON.parse(line) as {

@@ -1,5 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
-import { withDefaults, executeViaStdin, checkInstalled, extractVersion } from "../adapter-base.js";
+import fs from "node:fs";
+import os from "node:os";
+import { checkInstalled, executeViaStdin, extractVersion, withDefaults } from "../adapter-base.js";
 import type { RuntimeAdapter, RuntimeHealth } from "../types.js";
 
 export function createKimiRuntime(): RuntimeAdapter {
@@ -44,9 +45,9 @@ export function createKimiRuntime(): RuntimeAdapter {
         authenticated = "yes";
         authDetail = "env: MOONSHOT_API_KEY";
       } else {
-        const credDir = `${process.env.HOME}/.kimi/credentials`;
+        const credDir = `${os.homedir()}/.kimi/credentials`;
         try {
-          if (existsSync(credDir) && readdirSync(credDir).length > 0) {
+          if (fs.existsSync(credDir) && fs.readdirSync(credDir).length > 0) {
             authenticated = "yes";
             authDetail = "~/.kimi/credentials";
           }

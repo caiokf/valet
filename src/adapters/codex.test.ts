@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createCodexRuntime } from "./codex.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createCodexRuntime } from "./codex.js";
 
 const { execAbortableMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -9,6 +10,13 @@ const { execAbortableMock } = vi.hoisted(() => ({
 vi.mock("../exec.js", () => ({
   execAbortable: execAbortableMock,
 }));
+
+runAdapterContractTests({
+  name: "codex",
+  createRuntime: createCodexRuntime,
+  defaultModel: "gpt-5.3-codex",
+  mockExec: () => execAbortableMock,
+});
 
 describe("codex adapter", () => {
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createCodeRabbitRuntime } from "./coderabbit.js";
+import { runAdapterContractTests } from "../adapter-contract-tests.js";
 import { buildRequest } from "../test-helpers.js";
+import { createCodeRabbitRuntime } from "./coderabbit.js";
 
 const { execAbortableMock } = vi.hoisted(() => ({
   execAbortableMock: vi.fn(),
@@ -9,6 +10,13 @@ const { execAbortableMock } = vi.hoisted(() => ({
 vi.mock("../exec.js", () => ({
   execAbortable: execAbortableMock,
 }));
+
+runAdapterContractTests({
+  name: "coderabbit",
+  createRuntime: createCodeRabbitRuntime,
+  defaultModel: "default",
+  mockExec: () => execAbortableMock,
+});
 
 describe("coderabbit adapter", () => {
   beforeEach(() => {
