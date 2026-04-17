@@ -1,5 +1,5 @@
 {
-  "name": "valet",
+  "name": "@caiokf/valet",
   "version": "0.1.0",
   "description": "Unified adapter layer for headlessly driving AI coding CLI tools",
   "type": "module",
