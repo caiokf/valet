@@ -3,6 +3,7 @@ export {
   getRuntime,
   getRuntimeNames,
 } from "./registry.js";
+export { execAbortable } from "./exec.js";
 export type {
   AuthMethod,
   DiffInput,
