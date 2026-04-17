@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ```
-            _       _
- __   ____ | | ___ | |_
+             _      _
+ __   ____  | | ___| |_
  \ \ / / _` | |/ _ \ __|
   \ V / (_| | |  __/ |_
    \_/ \__,_|_|\___|\__|
