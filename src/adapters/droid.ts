@@ -38,7 +38,7 @@ export function createDroidRuntime(): RuntimeAdapter {
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
       const cmd = request.overrides?.command ?? "droid";
-      const result = await runExpectCommand(request, `${cmd} -p --model ${request.model}`, {
+      const result = await runExpectCommand(request, [cmd, "-p", "--model", request.model], {
         extraArgs: request.overrides?.extraArgs,
       });
       return { ...result, raw: stripAnsi(result.raw) };

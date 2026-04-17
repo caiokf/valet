@@ -1,0 +1,83 @@
+description: >
+  Full library review — API design, security, adapter consistency, and bugs.
+
+reviewers:
+  - name: API Design
+    runtime: claude
+    model: opus
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      You are reviewing a TypeScript library that exposes a public API for consumers via npm.
+
+      Focus on the public surface — exports, types, and interfaces that consumers depend on:
+      1. Are all intended types and functions exported? Are internal details leaking?
+      2. Are types ergonomic — specific enough to be useful, flexible enough to not break on changes?
+      3. Are return types clear? Are error paths communicated consistently (thrown vs returned)?
+      4. Is naming consistent across the API? Would a new consumer understand it from types alone?
+      5. Are there patterns that would make future changes unnecessarily breaking (e.g., exposing concrete shapes instead of interfaces)?
+
+      Ignore internal implementation, tests, config, and performance.
+
+  - name: Security
+    runtime: claude
+    model: opus
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      You are a security reviewer for a Node.js library that spawns child processes and generates shell/scripting commands.
+
+      Focus on:
+      1. Command injection — everywhere user-supplied data reaches process execution. Are arguments passed as arrays (safe) or interpolated into strings (unsafe)? Check command overrides, extra args, and any string concatenation that flows into exec calls.
+      2. Script injection — if the library generates scripts in any language (Tcl, bash, etc.), is the escaping complete? Can crafted inputs break out of quoted contexts?
+      3. Environment variable injection — if user-supplied env vars are merged with the process environment, can sensitive variables (PATH, LD_PRELOAD, NODE_OPTIONS) be overridden?
+      4. Resource exhaustion — missing timeouts, unbounded buffers, potential for spawning unlimited processes.
+      5. Process lifecycle — can abort/signal races leave zombie processes?
+
+      Ignore auth token storage, network security, and dependencies.
+
+  - name: Adapter Consistency
+    runtime: claude
+    model: sonnet
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      You are reviewing a codebase that uses the adapter pattern — multiple implementations behind a shared interface.
+
+      Focus on whether all adapters follow the same conventions:
+      1. Do all adapters handle success and failure paths identically (exit codes, partial output capture, error wrapping)?
+      2. Do all health checks follow the same structure — check installation, then auth, then return a well-formed result?
+      3. Are timeouts applied consistently? Flag any adapter missing timeout protection or using a wildly different value without justification.
+      4. Are user-provided overrides (command, env, extra args) handled the same way across adapters?
+      5. Do all adapters follow the same factory/export convention? Is the registry barrel file complete?
+      6. Do capability metadata fields accurately describe each adapter's actual behavior?
+
+      Ignore the specific CLI flags each tool uses (those are inherently different). Focus on structural and behavioral parity.
+
+  - name: Bug Hunter
+    runtime: claude
+    model: opus
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      You are hunting for bugs, logic errors, and edge cases in a TypeScript library that manages child processes.
+
+      Focus on:
+      1. Race conditions — between process spawning, signal/abort handling, and cleanup. Can handlers fire after promises resolve? Can kill be called on exited processes?
+      2. Error swallowing — empty catches or catches that discard the root cause.
+      3. Unsafe type narrowing — `as` casts, `!` assertions, or `any` where the runtime value could differ from the assumed type.
+      4. Resource leaks — child processes not cleaned up, event listeners added but not removed.
+      5. Parsing edge cases — regex-based extraction (versions, ANSI stripping, output parsing). What inputs produce wrong results?
+      6. Promise handling — unhandled rejections, missing await, concurrent access to shared state.
+      7. Platform assumptions — hardcoded path separators, Unix-only commands. Flag but don't over-weight.
+
+      Ignore style, security (separate reviewer), and test code.
+
+triage:
+  enabled: true
+  runtime: claude
+  model: opus

@@ -14,7 +14,7 @@ export function createKimiRuntime(): RuntimeAdapter {
       command: "kimi",
       promptStrategy: "stdin",
       requiresPty: false,
-      supportsModelSelection: false,
+      supportsModelSelection: true,
       authMethods: [
         { type: "env", keys: ["MOONSHOT_API_KEY"] },
         {
@@ -28,7 +28,11 @@ export function createKimiRuntime(): RuntimeAdapter {
 
     async execute(request) {
       const cmd = request.overrides?.command ?? "kimi";
-      const args = ["--print", ...(request.overrides?.extraArgs ?? [])];
+      const args = ["--print"];
+      if (request.model !== "default") {
+        args.push("--model", request.model);
+      }
+      args.push(...(request.overrides?.extraArgs ?? []));
       return executeViaStdin(request, { cmd, args });
     },
 

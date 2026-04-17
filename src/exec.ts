@@ -31,6 +31,7 @@ export function execAbortable(
     });
 
     if (stdin !== undefined && child.stdin) {
+      child.stdin.on("error", () => {});
       child.stdin.write(stdin);
       child.stdin.end();
     }

@@ -1,4 +1,3 @@
-export { execAbortable } from "./exec.js";
 export {
   getAllRuntimes,
   getRuntime,

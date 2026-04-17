@@ -36,7 +36,7 @@ export function createMastraCodeRuntime(): RuntimeAdapter {
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
       const cmd = request.overrides?.command ?? "mastracode";
-      const result = await runExpectCommand(request, `${cmd} --model ${request.model} -p`, {
+      const result = await runExpectCommand(request, [cmd, "--model", request.model, "-p"], {
         extraArgs: request.overrides?.extraArgs,
       });
       return { ...result, raw: stripAnsi(result.raw) };

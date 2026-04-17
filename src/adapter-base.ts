@@ -54,10 +54,10 @@ export async function runCommand(
     });
     return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
   } catch (error) {
-    const err = error as { stdout?: string; code?: number };
+    const err = error as { stdout?: string; code?: unknown };
     return {
       raw: err.stdout ?? String(error),
-      exitCode: err.code ?? 1,
+      exitCode: typeof err.code === "number" ? err.code : 1,
       durationMs: performance.now() - start,
     };
   }
@@ -65,14 +65,15 @@ export async function runCommand(
 
 export function buildExpectScript(
   promptFile: string,
-  spawnCmd: string,
+  spawnArgs: string[],
   timeoutSecs: number,
 ): string {
+  const escapedArgs = spawnArgs.map((a) => `"${escapeTcl(a)}"`).join(" ");
   return [
     `set f [open "${escapeTcl(promptFile)}" r]`,
     `set prompt [read $f]`,
     `close $f`,
-    `spawn ${spawnCmd} $prompt`,
+    `spawn ${escapedArgs} "$prompt"`,
     `set timeout ${Math.ceil(timeoutSecs)}`,
     `expect eof`,
   ].join("; ");
@@ -80,13 +81,12 @@ export function buildExpectScript(
 
 export async function runExpectCommand(
   request: RuntimeExecutionRequest,
-  spawnCmd: string,
+  spawnArgs: string[],
   opts: { extraArgs?: string[]; timeoutMs?: number } = {},
 ): Promise<RawExecutionOutput> {
   const timeoutSecs = (opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout) / 1000;
-  const extraArgs = (opts.extraArgs ?? []).map(escapeTcl).join(" ");
-  const fullSpawnCmd = [spawnCmd, extraArgs].filter(Boolean).join(" ");
-  const script = buildExpectScript(request.promptFile, fullSpawnCmd, timeoutSecs);
+  const allArgs = [...spawnArgs, ...(opts.extraArgs ?? [])];
+  const script = buildExpectScript(request.promptFile, allArgs, timeoutSecs);
   const env = buildEnv(request.overrides?.env);
   const start = performance.now();
   try {
@@ -98,10 +98,10 @@ export async function runExpectCommand(
     });
     return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
   } catch (error) {
-    const err = error as { stdout?: string; code?: number };
+    const err = error as { stdout?: string; code?: unknown };
     return {
       raw: err.stdout ?? String(error),
-      exitCode: err.code ?? 1,
+      exitCode: typeof err.code === "number" ? err.code : 1,
       durationMs: performance.now() - start,
     };
   }
@@ -147,10 +147,10 @@ export async function executeViaStdin(
   opts: { cmd: string; args: string[] },
 ): Promise<RawExecutionOutput> {
   const start = performance.now();
-  const prompt = readFileSync(request.promptFile, "utf-8");
   const env = buildEnv(request.overrides?.env);
 
   try {
+    const prompt = readFileSync(request.promptFile, "utf-8");
     const { stdout } = await execAbortable(opts.cmd, opts.args, {
       ...(env ? { env } : {}),
       maxBuffer: EXEC_DEFAULTS.maxBuffer,
@@ -160,10 +160,10 @@ export async function executeViaStdin(
     });
     return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
   } catch (error) {
-    const err = error as { stdout?: string; code?: number };
+    const err = error as { stdout?: string; code?: unknown };
     return {
       raw: err.stdout ?? String(error),
-      exitCode: err.code ?? 1,
+      exitCode: typeof err.code === "number" ? err.code : 1,
       durationMs: performance.now() - start,
     };
   }
@@ -206,7 +206,7 @@ export async function checkInstalled(
 
 export function escapeTcl(s: string): string {
   // biome-ignore lint: Tcl interprets these characters specially inside double-quoted strings
-  return s.replace(/[\\$\[\]{}]/g, "\\$&");
+  return s.replace(/[\\$\[\]{}"]/g, "\\$&");
 }
 
 export function stripAnsi(str: string): string {

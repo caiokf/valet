@@ -1,0 +1,32 @@
+description: >
+  Fast feedback on changes — bugs and security only.
+
+reviewers:
+  - name: Bug Hunter
+    runtime: claude
+    model: sonnet
+    context:
+      - src
+    prompt: |
+      Hunt for bugs, logic errors, and edge cases. Focus on:
+      1. Race conditions in async code and process management.
+      2. Error swallowing — empty catches, lost root causes.
+      3. Unsafe type narrowing — casts or assertions that could diverge from runtime.
+      4. Resource leaks — uncleaned processes, dangling listeners.
+      5. Parsing edge cases — regex, JSON parsing, string manipulation that breaks on unexpected input.
+      6. Missing await, unhandled rejections.
+
+  - name: Security
+    runtime: claude
+    model: sonnet
+    context:
+      - src
+    prompt: |
+      Quick security check for a library that spawns child processes. Focus on:
+      1. Command injection — user data reaching exec calls via string interpolation instead of argument arrays.
+      2. Script injection — if scripts are generated, is escaping complete?
+      3. Environment variable overrides that could hijack PATH or NODE_OPTIONS.
+      4. Missing timeouts or buffer limits on process execution.
+
+triage:
+  enabled: false

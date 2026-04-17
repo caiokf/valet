@@ -33,7 +33,7 @@ describe("mastracode adapter", () => {
       "expect",
       [
         "-c",
-        'set f [open "/tmp/prompt.txt" r]; set prompt [read $f]; close $f; spawn mastracode --model anthropic/claude-sonnet-4-6 -p $prompt; set timeout 600; expect eof',
+        'set f [open "/tmp/prompt.txt" r]; set prompt [read $f]; close $f; spawn "mastracode" "--model" "anthropic/claude-sonnet-4-6" "-p" "$prompt"; set timeout 600; expect eof',
       ],
       expect.any(Object),
     );

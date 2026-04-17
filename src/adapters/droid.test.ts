@@ -33,7 +33,7 @@ describe("droid adapter", () => {
       "expect",
       [
         "-c",
-        'set f [open "/tmp/prompt.txt" r]; set prompt [read $f]; close $f; spawn droid -p --model claude-sonnet-4-6 $prompt; set timeout 600; expect eof',
+        'set f [open "/tmp/prompt.txt" r]; set prompt [read $f]; close $f; spawn "droid" "-p" "--model" "claude-sonnet-4-6" "$prompt"; set timeout 600; expect eof',
       ],
       expect.any(Object),
     );

@@ -5,9 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ```
-      ╦ ╦┌─┐┌┐ ╔═╗╔═╗   ╔╦╗┌─┐┌┐┌┌─┐┌─┐┬  ┌─┐
-      ║║║├┤ ├┴┐║ ║╚═╗───║║║├┤ │││└─┐│  │  ├┤
-      ╚╩╝└─┘└─┘╚═╝╚═╝   ╩ ╩└─┘┘└┘└─┘└─┘┴─┘└─┘
+            _       _
+ __   ____ | | ___ | |_
+ \ \ / / _` | |/ _ \ __|
+  \ V / (_| | |  __/ |_
+   \_/ \__,_|_|\___|\__|
 ```
 
 > Unified adapter layer for headlessly driving AI coding CLI tools.
@@ -27,7 +29,7 @@ One API to execute prompts, check health, and validate models across **10 AI cod
 | Pi | `pi` | stdin | no |
 | Droid | `droid` | expect-script | yes |
 | MastraCode | `mastracode` | expect-script | yes |
-| Copilot | `gh` | stdin | no |
+| Copilot | `gh` | file-ref | no |
 
 ## Install
 
@@ -61,7 +63,7 @@ const result = await claude.execute({
   model: "sonnet",
   promptFile: "/path/to/prompt.txt",
 })
-// { stdout: "...", stderr: "", exitCode: 0, durationMs: 1234 }
+// { raw: "...", exitCode: 0, durationMs: 1234 }
 ```
 
 ## Architecture

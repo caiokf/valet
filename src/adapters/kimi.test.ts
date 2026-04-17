@@ -39,7 +39,7 @@ describe("kimi adapter", () => {
     expect(readFileSyncMock).toHaveBeenCalledWith("/tmp/prompt.txt", "utf-8");
     expect(execAbortableMock).toHaveBeenCalledWith(
       "kimi",
-      ["--print"],
+      ["--print", "--model", "kimi-k2.5"],
       expect.objectContaining({ stdin: "full prompt" }),
     );
     expect(result.raw).toBe("kimi-output");

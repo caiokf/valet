@@ -1,0 +1,59 @@
+description: >
+  Deep security review — command injection, script injection, and process safety.
+
+reviewers:
+  - name: Command Injection
+    runtime: claude
+    model: opus
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      Review all code paths where user-supplied data reaches process execution.
+
+      Focus on:
+      1. Are command arguments always passed as array elements to execFile-style calls (safe), or are they ever interpolated into strings (unsafe)?
+      2. Can user-provided command overrides or extra arguments inject additional commands?
+      3. Is shell:true ever used or could it be accidentally enabled?
+      4. Are there any paths where a single string is split and passed to a shell, rather than using array-based argument passing?
+
+      Provide exact attack vectors where possible.
+
+  - name: Script Injection
+    runtime: claude
+    model: opus
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      Review any code that generates scripts in other languages (Tcl, bash, etc.) from user-supplied input.
+
+      Focus on:
+      1. Is the escaping function complete for the target language? List every special character in that language and verify each is handled.
+      2. Can crafted file paths, command names, or arguments break out of quoted string contexts?
+      3. What happens with newlines, null bytes, or unicode in inputs that flow into generated scripts?
+      4. Is the script execution method (spawn vs exec) safe from shell interpretation?
+
+      Provide exact injection strings where possible.
+
+  - name: Process Safety
+    runtime: claude
+    model: opus
+    scope: codebase
+    context:
+      - src
+    prompt: |
+      Review child process lifecycle management.
+
+      Focus on:
+      1. Zombie processes — can children outlive the parent or survive after abort signals?
+      2. Signal handling races — between SIGTERM delivery and exit events, between abort and promise resolution.
+      3. Resource exhaustion — are buffer limits and timeouts enforced on all execution paths?
+      4. Environment merging — if user env vars are merged with process.env, can sensitive variables (PATH, LD_PRELOAD, NODE_OPTIONS) be overridden?
+      5. Stdin deadlocks — after writing to a child's stdin, can the pipe block if the child doesn't consume it?
+      6. Cleanup guarantees — are temp resources and listeners always cleaned up, even on error paths?
+
+triage:
+  enabled: true
+  runtime: claude
+  model: opus

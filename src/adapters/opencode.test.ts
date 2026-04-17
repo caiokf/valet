@@ -36,7 +36,7 @@ describe("opencode adapter", () => {
       "expect",
       [
         "-c",
-        'set f [open "/tmp/prompt.txt" r]; set prompt [read $f]; close $f; spawn opencode run --format json -m zai/glm-5 $prompt; set timeout 600; expect eof',
+        'set f [open "/tmp/prompt.txt" r]; set prompt [read $f]; close $f; spawn "opencode" "run" "--format" "json" "-m" "zai/glm-5" "$prompt"; set timeout 600; expect eof',
       ],
       expect.any(Object),
     );

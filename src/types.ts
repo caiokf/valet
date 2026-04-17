@@ -45,8 +45,8 @@ export type RuntimeHealth = {
 
 /** How the runtime receives prompts in headless mode */
 export type PromptStrategy =
-  | "stdin" // Prompt piped via stdin (gemini, kimi, pi, copilot)
-  | "file-ref" // CLI reads a file path (claude: "Read file: <path>")
+  | "stdin" // Prompt piped via stdin (gemini, kimi, pi)
+  | "file-ref" // Prompt file read by adapter, content passed via CLI flag (claude, copilot)
   | "file-arg" // Prompt file path passed as CLI argument
   | "expect-script" // TUI-only, driven via expect (opencode, droid, mastracode)
   | "native-review"; // Runtime has its own review engine (coderabbit)

@@ -18,7 +18,7 @@ export function createCopilotRuntime(): RuntimeAdapter {
     supportsCustomPrompt: true,
     capabilities: {
       command: "gh",
-      promptStrategy: "stdin",
+      promptStrategy: "file-ref",
       requiresPty: false,
       supportsModelSelection: true,
       authMethods: [
@@ -30,8 +30,19 @@ export function createCopilotRuntime(): RuntimeAdapter {
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
+      const start = performance.now();
       const cmd = request.overrides?.command ?? "gh";
-      const prompt = fs.readFileSync(request.promptFile, "utf-8");
+
+      let prompt: string;
+      try {
+        prompt = fs.readFileSync(request.promptFile, "utf-8");
+      } catch (error) {
+        return {
+          raw: String(error),
+          exitCode: 1,
+          durationMs: performance.now() - start,
+        };
+      }
 
       const baseArgs = [
         "-p",
@@ -57,7 +68,7 @@ export function createCopilotRuntime(): RuntimeAdapter {
       } catch {
         return {
           name,
-          command: "copilot",
+          command: "gh",
           installed: false,
           version: null,
           authenticated: "unknown",
@@ -76,7 +87,7 @@ export function createCopilotRuntime(): RuntimeAdapter {
       } catch {
         return {
           name,
-          command: "copilot",
+          command: "gh",
           installed: false,
           version: null,
           authenticated: "unknown",
@@ -129,7 +140,7 @@ export function createCopilotRuntime(): RuntimeAdapter {
 
       return {
         name,
-        command: "copilot",
+        command: "gh",
         installed: true,
         version,
         authenticated,
