@@ -106,6 +106,13 @@ export type RuntimeAdapter = {
   /** Validate that a model string is supported by this runtime */
   validateModel(model: string): boolean;
 
+  /**
+   * Discover the runtime's live model catalog from the CLI's own
+   * configuration (e.g. a local models store), unioned with the static
+   * `models` seed. Optional — consumers fall back to `models` when absent.
+   */
+  discoverModels?(): string[];
+
   /** Pre-flight check: can this runtime handle the given request? */
   preflight(
     request: Pick<RuntimeExecutionRequest, "model" | "overrides">,
