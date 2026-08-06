@@ -27,6 +27,7 @@ export function createCopilotRuntime(): RuntimeAdapter {
         { type: "auth-file", path: "~/.copilot", description: "Copilot config directory" },
       ],
       relevantEnvVars: ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
+      supportsSessionCapture: false,
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {

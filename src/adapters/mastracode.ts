@@ -32,6 +32,7 @@ export function createMastraCodeRuntime(): RuntimeAdapter {
         { type: "auth-file", path: "~/.mastracode", description: "MastraCode config directory" },
       ],
       relevantEnvVars: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+      supportsSessionCapture: false,
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {

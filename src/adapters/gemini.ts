@@ -20,6 +20,7 @@ export function createGeminiRuntime(): RuntimeAdapter {
       supportsModelSelection: true,
       authMethods: [{ type: "env", keys: ["GEMINI_API_KEY", "GOOGLE_API_KEY"] }],
       relevantEnvVars: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+      supportsSessionCapture: false,
     },
 
     async execute(request) {

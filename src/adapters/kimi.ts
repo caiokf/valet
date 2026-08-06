@@ -24,6 +24,7 @@ export function createKimiRuntime(): RuntimeAdapter {
         },
       ],
       relevantEnvVars: ["MOONSHOT_API_KEY"],
+      supportsSessionCapture: false,
     },
 
     async execute(request) {

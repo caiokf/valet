@@ -39,13 +39,18 @@ export function createOpenCodeRuntime(): RuntimeAdapter {
         },
       ],
       relevantEnvVars: [],
+      supportsSessionCapture: false,
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
       const cmd = request.overrides?.command ?? "opencode";
-      const result = await runExpectCommand(request, [cmd, "run", "--format", "json", "-m", request.model], {
-        extraArgs: request.overrides?.extraArgs,
-      });
+      const result = await runExpectCommand(
+        request,
+        [cmd, "run", "--format", "json", "-m", request.model],
+        {
+          extraArgs: request.overrides?.extraArgs,
+        },
+      );
       const cleaned = stripAnsi(result.raw);
       const { text, error: apiError } = parseOutput(cleaned);
 

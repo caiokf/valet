@@ -33,6 +33,7 @@ export function createCodexRuntime(): RuntimeAdapter {
         { type: "auth-file", path: "~/.codex/auth.json", description: "Codex CLI auth file" },
       ],
       relevantEnvVars: ["OPENAI_API_KEY"],
+      supportsSessionCapture: false,
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {

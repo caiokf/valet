@@ -21,6 +21,7 @@ export function createCodeRabbitRuntime(): RuntimeAdapter {
       supportsModelSelection: false,
       authMethods: [{ type: "auth-command", command: ["cr", "auth", "status"] }],
       relevantEnvVars: [],
+      supportsSessionCapture: false,
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {

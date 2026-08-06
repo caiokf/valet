@@ -23,12 +23,28 @@ export type RuntimeExecutionRequest = {
   signal?: AbortSignal;
   diff?: DiffInput;
   overrides?: RuntimeOverrides;
+  /**
+   * Record the run's conversation and leave it at this path.
+   *
+   * Every CLI already keeps its own session log; what differs is whether the
+   * caller may choose where. Adapters that can write straight to a path do, and
+   * adapters whose CLI insists on its own store copy the file here afterwards —
+   * so a caller always finds the transcript exactly where it asked, whatever the
+   * runtime underneath. Ignored by runtimes that cannot record one; check
+   * `capabilities.supportsSessionCapture` first to know.
+   */
+  sessionFile?: string;
 };
 
 export type RawExecutionOutput = {
   raw: string;
   exitCode: number;
   durationMs: number;
+  /**
+   * Where the transcript was left, when one was requested and written. Absent
+   * when the runtime cannot record one, or when the run died before it did.
+   */
+  sessionFile?: string;
 };
 
 export type RuntimeHealth = {
@@ -81,6 +97,8 @@ export type RuntimeCapabilities = {
   authMethods: AuthMethod[];
   /** Env vars that affect this runtime */
   relevantEnvVars: string[];
+  /** Whether `sessionFile` on a request produces a readable transcript */
+  supportsSessionCapture: boolean;
 };
 
 /** Pre-flight check result */
@@ -117,4 +135,60 @@ export type RuntimeAdapter = {
   preflight(
     request: Pick<RuntimeExecutionRequest, "model" | "overrides">,
   ): Promise<PreflightResult>;
+
+  /**
+   * Read a session file this adapter wrote back into the common transcript
+   * shape. Knowing the CLI's own session schema is the same kind of knowledge as
+   * knowing its flags, so it lives with the adapter rather than in every
+   * consumer. Absent when the runtime cannot record a session.
+   */
+  readTranscript?(sessionFile: string): Transcript | null;
 };
+
+// --- Transcripts ---
+
+/**
+ * A run's conversation, normalised across runtimes.
+ *
+ * Each CLI writes its session in its own schema. Rather than teach every
+ * consumer all of them, adapters flatten theirs into this shape: an ordered list
+ * of messages, each a list of typed blocks. Anything that can render these can
+ * render any runtime valet learns to capture.
+ */
+export type Transcript = {
+  runtime: string;
+  model?: string;
+  messages: TranscriptMessage[];
+  usage?: TranscriptUsage;
+};
+
+export type TranscriptUsage = {
+  durationMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  costUsd?: number;
+};
+
+export type TranscriptRole = "user" | "assistant" | "tool" | "system";
+
+export type TranscriptMessage = {
+  id: string;
+  role: TranscriptRole;
+  at?: string;
+  blocks: TranscriptBlock[];
+};
+
+export type TranscriptBlock =
+  | { kind: "text"; text: string }
+  | { kind: "thinking"; text: string }
+  | {
+      kind: "tool_use";
+      id?: string;
+      name: string;
+      input: Record<string, unknown>;
+      /** One line standing in for the call when the block is collapsed. */
+      summary: string;
+    }
+  | { kind: "tool_result"; toolUseId?: string; ok: boolean; text: string }
+  /** An edit carrying its own before/after, so a consumer can draw a diff. */
+  | { kind: "edit"; path: string; before: string; after: string };

@@ -34,6 +34,7 @@ export function createDroidRuntime(): RuntimeAdapter {
         },
       ],
       relevantEnvVars: [],
+      supportsSessionCapture: false,
     },
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {

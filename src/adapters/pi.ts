@@ -1,7 +1,24 @@
 import os from "node:os";
 import fs from "node:fs";
+import path from "node:path";
 import { withDefaults, executeViaStdin, checkInstalled } from "../adapter-base.js";
-import type { RuntimeAdapter, RuntimeHealth } from "../types.js";
+import {
+  readJsonl,
+  asRecord,
+  flattenText,
+  summariseTool,
+  editFromToolInput,
+  roleFor,
+  buildTranscript,
+} from "../transcript.js";
+import type {
+  RuntimeAdapter,
+  RuntimeHealth,
+  Transcript,
+  TranscriptBlock,
+  TranscriptMessage,
+  TranscriptRole,
+} from "../types.js";
 
 const PI_MODELS = [
   "anthropic/claude-sonnet-4-6",
@@ -60,12 +77,37 @@ export function createPiRuntime(): RuntimeAdapter {
         },
       ],
       relevantEnvVars: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY"],
+      supportsSessionCapture: true,
     },
 
     async execute(request) {
       const cmd = request.overrides?.command ?? "pi";
-      const args = ["-p", "--model", request.model, ...(request.overrides?.extraArgs ?? [])];
-      return executeViaStdin(request, { cmd, args });
+
+      // pi writes its session wherever it is pointed, so it can record straight
+      // to the caller's path with nothing to copy afterwards.
+      if (request.sessionFile) {
+        try {
+          fs.mkdirSync(path.dirname(request.sessionFile), { recursive: true });
+        } catch {
+          // A path that cannot be created just means no transcript.
+        }
+      }
+
+      const args = [
+        "-p",
+        "--model",
+        request.model,
+        ...(request.sessionFile ? ["--session", request.sessionFile] : []),
+        ...(request.overrides?.extraArgs ?? []),
+      ];
+
+      const result = await executeViaStdin(request, { cmd, args });
+      const captured = Boolean(request.sessionFile && fs.existsSync(request.sessionFile));
+      return captured ? { ...result, sessionFile: request.sessionFile } : result;
+    },
+
+    readTranscript(sessionFile: string): Transcript | null {
+      return parsePiSession(sessionFile);
     },
 
     async healthCheck(): Promise<RuntimeHealth> {
@@ -109,3 +151,111 @@ export function createPiRuntime(): RuntimeAdapter {
 }
 
 export const createAdapter = createPiRuntime;
+
+export function parsePiSession(sessionFile: string): Transcript | null {
+  const events = readJsonl(sessionFile);
+  if (events.length === 0) return null;
+
+  const messages: TranscriptMessage[] = [];
+  let model: string | undefined;
+
+  for (const event of events) {
+    if (event.type === "model_change" && typeof event.modelId === "string") {
+      model =
+        typeof event.provider === "string" ? `${event.provider}/${event.modelId}` : event.modelId;
+      continue;
+    }
+    if (event.type !== "message") continue;
+
+    // pi nests the turn under `message`, and puts a tool result's call id on the
+    // message rather than on its blocks.
+    const message = asRecord(event.message);
+    if (!message) continue;
+
+    const role = String(message.role ?? "");
+    const blocks = toBlocks(message, role);
+    if (blocks.length === 0) continue;
+
+    const base: TranscriptRole =
+      role === "toolResult"
+        ? "tool"
+        : role === "user"
+          ? "user"
+          : role === "assistant"
+            ? "assistant"
+            : "system";
+
+    messages.push({
+      id: String(event.id ?? messages.length),
+      role: roleFor(base, blocks),
+      ...(typeof event.timestamp === "string" ? { at: event.timestamp } : {}),
+      blocks,
+    });
+  }
+
+  return buildTranscript("pi", messages, model);
+}
+
+function toBlocks(message: Record<string, unknown>, role: string): TranscriptBlock[] {
+  const isResult = role === "toolResult";
+  const content = message.content;
+  const resultId = typeof message.toolCallId === "string" ? { toolUseId: message.toolCallId } : {};
+  const resultOk = message.isError !== true;
+
+  if (typeof content === "string") {
+    if (!content.trim()) return [];
+    return isResult
+      ? [{ kind: "tool_result", ...resultId, ok: resultOk, text: content }]
+      : [{ kind: "text", text: content }];
+  }
+  if (!Array.isArray(content)) return [];
+
+  const blocks: TranscriptBlock[] = [];
+  for (const raw of content) {
+    const block = asRecord(raw);
+    if (!block) continue;
+
+    switch (block.type) {
+      case "text": {
+        const text = String(block.text ?? "");
+        if (!text.trim()) break;
+        blocks.push(
+          isResult
+            ? { kind: "tool_result", ...resultId, ok: resultOk, text }
+            : { kind: "text", text },
+        );
+        break;
+      }
+      case "thinking": {
+        const text = String(block.thinking ?? block.text ?? "");
+        if (text.trim()) blocks.push({ kind: "thinking", text });
+        break;
+      }
+      case "toolCall": {
+        const name = String(block.name ?? block.toolName ?? "tool");
+        const input = asRecord(block.arguments) ?? asRecord(block.input) ?? {};
+        blocks.push({
+          kind: "tool_use",
+          ...(typeof block.id === "string" ? { id: block.id } : {}),
+          name,
+          input,
+          summary: summariseTool(input),
+        });
+        const edit = editFromToolInput(name, input);
+        if (edit) blocks.push(edit);
+        break;
+      }
+      case "toolResult": {
+        const toolUseId = block.toolCallId ?? block.id;
+        blocks.push({
+          kind: "tool_result",
+          ...(typeof toolUseId === "string" ? { toolUseId } : resultId),
+          ok: block.isError !== true && resultOk,
+          text: flattenText(block.output ?? block.content ?? block.result),
+        });
+        break;
+      }
+    }
+  }
+  return blocks;
+}

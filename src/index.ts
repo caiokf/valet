@@ -4,6 +4,7 @@ export {
   getRuntimeNames,
 } from "./registry.js";
 export { execAbortable } from "./exec.js";
+export { readJsonl } from "./transcript.js";
 export type {
   AuthMethod,
   DiffInput,
@@ -16,4 +17,9 @@ export type {
   RuntimeHealth,
   RuntimeOverrides,
   RuntimeType,
+  Transcript,
+  TranscriptBlock,
+  TranscriptMessage,
+  TranscriptRole,
+  TranscriptUsage,
 } from "./types.js";
