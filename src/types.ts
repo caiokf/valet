@@ -24,6 +24,17 @@ export type RuntimeExecutionRequest = {
   diff?: DiffInput;
   overrides?: RuntimeOverrides;
   /**
+   * Wall clock the runtime gets before it is killed, in milliseconds.
+   *
+   * Overrides both the adapter's own default and the shared one, because
+   * only the caller knows how much work it handed over: the same runtime
+   * that answers a one-file diff in seconds may need half an hour on a
+   * whole-codebase pass, and a wall tuned for the first reads as silence
+   * on the second — the process dies having written nothing, which is
+   * indistinguishable from a reviewer that found no problems.
+   */
+  timeoutMs?: number;
+  /**
    * Record the run's conversation and leave it at this path.
    *
    * Every CLI already keeps its own session log; what differs is whether the

@@ -15,6 +15,18 @@ export const EXEC_DEFAULTS = {
   preflightTimeout: 3000,
 } as const;
 
+/**
+ * Resolve the wall a runtime gets. The caller's request wins over the
+ * adapter's own default, which wins over the shared one — an adapter
+ * knows its CLI is slow, but only the caller knows how big the job is.
+ */
+export function resolveTimeout(
+  request: Pick<RuntimeExecutionRequest, "timeoutMs">,
+  adapterDefault?: number,
+): number {
+  return request.timeoutMs ?? adapterDefault ?? EXEC_DEFAULTS.defaultTimeout;
+}
+
 export function buildEnv(overrides?: Record<string, string>): Record<string, string> | undefined {
   if (!overrides || Object.keys(overrides).length === 0) {
     return undefined;
@@ -48,7 +60,7 @@ export async function runCommand(
     const { stdout } = await execAbortable(cmd, args, {
       ...(env ? { env } : {}),
       maxBuffer: EXEC_DEFAULTS.maxBuffer,
-      timeout: opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout,
+      timeout: resolveTimeout(request, opts.timeoutMs),
       signal: request.signal,
       stdin: opts.stdin,
     });
@@ -84,16 +96,16 @@ export async function runExpectCommand(
   spawnArgs: string[],
   opts: { extraArgs?: string[]; timeoutMs?: number } = {},
 ): Promise<RawExecutionOutput> {
-  const timeoutSecs = (opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout) / 1000;
+  const timeoutMs = resolveTimeout(request, opts.timeoutMs);
   const allArgs = [...spawnArgs, ...(opts.extraArgs ?? [])];
-  const script = buildExpectScript(request.promptFile, allArgs, timeoutSecs);
+  const script = buildExpectScript(request.promptFile, allArgs, timeoutMs / 1000);
   const env = buildEnv(request.overrides?.env);
   const start = performance.now();
   try {
     const { stdout } = await execAbortable("expect", ["-c", script], {
       ...(env ? { env } : {}),
       maxBuffer: EXEC_DEFAULTS.maxBuffer,
-      timeout: opts.timeoutMs ?? EXEC_DEFAULTS.defaultTimeout,
+      timeout: timeoutMs,
       signal: request.signal,
     });
     return { raw: stdout, exitCode: 0, durationMs: performance.now() - start };
@@ -154,7 +166,7 @@ export async function executeViaStdin(
     const { stdout } = await execAbortable(opts.cmd, opts.args, {
       ...(env ? { env } : {}),
       maxBuffer: EXEC_DEFAULTS.maxBuffer,
-      timeout: EXEC_DEFAULTS.defaultTimeout,
+      timeout: resolveTimeout(request),
       signal: request.signal,
       stdin: prompt,
     });
