@@ -31,7 +31,7 @@ describe("codex adapter", () => {
 
     expect(execAbortableMock).toHaveBeenCalledWith(
       "codex",
-      ["exec", "--full-auto"],
+      ["exec", "-s", "workspace-write"],
       expect.objectContaining({
         stdin: "Read and follow the instructions in this file: /tmp/prompt.txt",
       }),
@@ -46,7 +46,7 @@ describe("codex adapter", () => {
 
     expect(execAbortableMock).toHaveBeenCalledWith(
       "codex",
-      ["exec", "--full-auto", "-m", "gpt-5.4"],
+      ["exec", "-s", "workspace-write", "-m", "gpt-5.4"],
       expect.any(Object),
     );
   });

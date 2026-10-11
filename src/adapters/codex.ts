@@ -38,7 +38,7 @@ export function createCodexRuntime(): RuntimeAdapter {
 
     async execute(request: RuntimeExecutionRequest): Promise<RawExecutionOutput> {
       const cmd = request.overrides?.command ?? "codex";
-      const args = ["exec", "--full-auto"];
+      const args = ["exec", "-s", "workspace-write"];
 
       if (request.model !== "default") {
         args.push("-m", request.model);
